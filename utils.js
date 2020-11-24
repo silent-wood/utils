@@ -1,25 +1,30 @@
 (function () {
     var class2type = {}
-    var toString = class2type.toString
-    var hasOwn = class2type.hasOwnProperty
-    var fnToString = hasOwn.toString // class2type.hasOwnProperty.toString;
-    var ObjectFunctionString = fnToString.call(Object) // class2type.hasOwnProperty.toString.call(Object);
-    var getProto = Object.getPrototypeOf // 获取原型链
-
+    var toString = class2type.toString // Object.prototype.toString 检测数据类型
+    var hasOwn = class2type.hasOwnProperty // Object.prototype.hasOwnProperty 检测是否私有属性
+    var fnToString = hasOwn.toString // Function.prototype.toString 吧函数转换成字符串;
+    var ObjectFunctionString = fnToString.call(Object) // => "function Object(){ [native code] }"
+    var getProto = Object.getPrototypeOf // 获取当前对象的原型链__proto__
+    
+    // 简历数据类型检测的映射表 {"[object Array]": "array", ... ...}
     var typeMap = ['String', 'Number', 'Boolean', 'Object', 'Array', 'Fuction', 'Date', 'RegExp', 'Symbol', 'BigInt']
     typeMap.forEach(function(name) {
         class2type['[object ' + name + ']'] = name.toLocaleLowerCase()
     })
 
-
+    // 返回数据类型的方法
     var toType = function toType(obj) {
+        // 传递null/undefined 
         // typeof 检测只能检测基本数据类型，null的话也返回object
         if (obj == null) return obj + ''
+        // 基于字面量方式(var/let/const)创造的基本数据类型，直接基于typeof检测即可「性能要高一些」；
+        // 剩余的基于Object.prototype.toString.call的方式来检测，把获取的值到映射表中匹配，匹配结果是字符串对应的数据类型；
         return typeof obj === 'function' || typeof obj === 'object'
         ? class2type[toString.call(obj)] || 'object'
         : typeof obj
     }
     var isFunction = function isFunction(obj) {
+        // typeof obj.nodeType !== "number" ：防止在部分浏览器中，检测<object>元素对象结果也是"function"，但是它的nodeType=1，处理浏览器兼容问题
         return typeof obj === 'function' && obj.nodeType !== 'number'
     }
 
@@ -37,6 +42,9 @@
         var length = !!obj && 'length' in obj && obj.length
         var type = toType(obj)
         if (isFunction(obj) || isWindow(obj)) return false
+        // type === "array" 数组
+        // length === 0 空的类数组
+        // 最后一个条件判断的是非空的类数组「有length属性，并且最大索引在对象中」
         return type === 'array' || length === 0 ||
             typeof length === 'number' && length > 0 && (length - 1) in obj
     }
@@ -45,10 +53,15 @@
      * 
      */
     var isPlainObject = function isPlainObject(obj) {
+        // 不存在或者基于toString检测结果都不是[object Object],那么一定不是纯粹的对象
         if (!obj || toString.call(obj) !== '[object Object]') return false
+        // 获取当前值的原型链「直属类的原型链」
         var proto = getProto(obj)
+        // Object.create(null):这样创造的对象没有__proto__
         if (!proto) return true
+        // Ctor存储原型对象上的constructor属性，没有这个属性就是false
         var Ctor = proto.constructor
+        // 条件成立说明原型上的构造函数是Object：obj就是Object的一个实例，并且obj.__proto__===Object.prototype
         return typeof Ctor === "function" && fnToString.call(Ctor) === ObjectFunctionString;
     }
     /**
@@ -57,7 +70,8 @@
      */
     var isEmptyObject = function isEmptyObject (obj) {
         if (obj == null) return false
-        if (typeof obj != '[object Object]') return false
+        if (typeof obj !== '[object Object]') return false
+        // 是一个对象「纯粹对象或者特殊对象都可以」
         var keys = Object.keys(obj)
         if (typeof Symbol != 'undefined') {
             keys.concat(Object.getOwnPropertySymbols(obj))
