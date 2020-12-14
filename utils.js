@@ -193,12 +193,15 @@
         shallowClone: shallowClone,
         deepClone: deepClone
     }
+    // 判断是都是浏览器或者webview
     if (typeof window !== 'undefined') {
         window._ = window.utils = utils
     }
+    // 是否是Node 环境
     if (typeof module === 'object' && typeof module.exports === 'object') {
         module.exports = utils
     }
+    return utils
 })()
 
 
